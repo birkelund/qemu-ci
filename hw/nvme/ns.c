@@ -164,7 +164,7 @@ static int nvme_ns_init_blk(NvmeNamespace *ns, Error **errp)
     return 0;
 }
 
-static int nvme_ns_zoned_check_calc_geometry(NvmeNamespace *ns, Error **errp)
+static int nvme_zns_check_calc_geometry(NvmeNamespace *ns, Error **errp)
 {
     uint64_t zone_size, zone_cap;
 
@@ -214,7 +214,7 @@ static int nvme_ns_zoned_check_calc_geometry(NvmeNamespace *ns, Error **errp)
     return 0;
 }
 
-static void nvme_ns_zoned_init_state(NvmeNamespace *ns)
+static void nvme_zns_init_state(NvmeNamespace *ns)
 {
     uint64_t start = 0, zone_size = ns->zone_size;
     uint64_t capacity = ns->num_zones * zone_size;
@@ -238,7 +238,7 @@ static void nvme_ns_zoned_init_state(NvmeNamespace *ns)
             zone_size = capacity - start;
         }
         zone->d.zt = NVME_ZONE_TYPE_SEQ_WRITE;
-        nvme_set_zone_state(zone, NVME_ZONE_STATE_EMPTY);
+        nvme_zns_set_state(zone, NVME_ZONE_STATE_EMPTY);
         zone->d.za = 0;
         zone->d.zcap = ns->zone_capacity;
         zone->d.zslba = start;
@@ -253,12 +253,12 @@ static void nvme_ns_zoned_init_state(NvmeNamespace *ns)
     }
 }
 
-static void nvme_ns_init_zoned(NvmeNamespace *ns)
+static void nvme_zns_init(NvmeNamespace *ns)
 {
     NvmeIdNsZoned *id_ns_z;
     int i;
 
-    nvme_ns_zoned_init_state(ns);
+    nvme_zns_init_state(ns);
 
     id_ns_z = g_malloc0(sizeof(NvmeIdNsZoned));
 
@@ -298,49 +298,49 @@ static void nvme_ns_init_zoned(NvmeNamespace *ns)
     ns->id_ns_zoned = id_ns_z;
 }
 
-static void nvme_clear_zone(NvmeNamespace *ns, NvmeZone *zone)
+static void nvme_zns_clear_zone(NvmeNamespace *ns, NvmeZone *zone)
 {
     uint8_t state;
 
     zone->w_ptr = zone->d.wp;
-    state = nvme_get_zone_state(zone);
+    state = nvme_zns_state(zone);
     if (zone->d.wp != zone->d.zslba ||
         (zone->d.za & NVME_ZA_ZD_EXT_VALID)) {
         if (state != NVME_ZONE_STATE_CLOSED) {
             trace_pci_nvme_clear_ns_close(state, zone->d.zslba);
-            nvme_set_zone_state(zone, NVME_ZONE_STATE_CLOSED);
+            nvme_zns_set_state(zone, NVME_ZONE_STATE_CLOSED);
         }
-        nvme_aor_inc_active(ns);
+        nvme_zns_aor_inc_active(ns);
         QTAILQ_INSERT_HEAD(&ns->closed_zones, zone, entry);
     } else {
         trace_pci_nvme_clear_ns_reset(state, zone->d.zslba);
-        nvme_set_zone_state(zone, NVME_ZONE_STATE_EMPTY);
+        nvme_zns_set_state(zone, NVME_ZONE_STATE_EMPTY);
     }
 }
 
 /*
  * Close all the zones that are currently open.
  */
-static void nvme_zoned_ns_shutdown(NvmeNamespace *ns)
+static void nvme_zns_shutdown(NvmeNamespace *ns)
 {
     NvmeZone *zone, *next;
 
     QTAILQ_FOREACH_SAFE(zone, &ns->closed_zones, entry, next) {
         QTAILQ_REMOVE(&ns->closed_zones, zone, entry);
-        nvme_aor_dec_active(ns);
-        nvme_clear_zone(ns, zone);
+        nvme_zns_aor_dec_active(ns);
+        nvme_zns_clear_zone(ns, zone);
     }
     QTAILQ_FOREACH_SAFE(zone, &ns->imp_open_zones, entry, next) {
         QTAILQ_REMOVE(&ns->imp_open_zones, zone, entry);
-        nvme_aor_dec_open(ns);
-        nvme_aor_dec_active(ns);
-        nvme_clear_zone(ns, zone);
+        nvme_zns_aor_dec_open(ns);
+        nvme_zns_aor_dec_active(ns);
+        nvme_zns_clear_zone(ns, zone);
     }
     QTAILQ_FOREACH_SAFE(zone, &ns->exp_open_zones, entry, next) {
         QTAILQ_REMOVE(&ns->exp_open_zones, zone, entry);
-        nvme_aor_dec_open(ns);
-        nvme_aor_dec_active(ns);
-        nvme_clear_zone(ns, zone);
+        nvme_zns_aor_dec_open(ns);
+        nvme_zns_aor_dec_active(ns);
+        nvme_zns_clear_zone(ns, zone);
     }
 
     assert(ns->nr_open_zones == 0);
@@ -410,10 +410,10 @@ int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
         return -1;
     }
     if (ns->params.zoned) {
-        if (nvme_ns_zoned_check_calc_geometry(ns, errp) != 0) {
+        if (nvme_zns_check_calc_geometry(ns, errp) != 0) {
             return -1;
         }
-        nvme_ns_init_zoned(ns);
+        nvme_zns_init(ns);
     }
 
     return 0;
@@ -428,7 +428,7 @@ void nvme_ns_shutdown(NvmeNamespace *ns)
 {
     blk_flush(ns->blkconf.blk);
     if (ns->params.zoned) {
-        nvme_zoned_ns_shutdown(ns);
+        nvme_zns_shutdown(ns);
     }
 }
 
