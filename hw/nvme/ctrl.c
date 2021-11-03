@@ -164,6 +164,7 @@
 
 #include "nvme.h"
 #include "dif.h"
+#include "zns.h"
 #include "trace.h"
 
 #define NVME_MAX_IOQPAIRS 0xffff
@@ -1573,23 +1574,6 @@ static void nvme_aio_err(NvmeRequest *req, int ret)
     }
 
     req->status = status;
-}
-
-static inline uint32_t nvme_zone_idx(NvmeNamespace *ns, uint64_t slba)
-{
-    return ns->zone_size_log2 > 0 ? slba >> ns->zone_size_log2 :
-                                    slba / ns->zone_size;
-}
-
-static inline NvmeZone *nvme_get_zone_by_slba(NvmeNamespace *ns, uint64_t slba)
-{
-    uint32_t zone_idx = nvme_zone_idx(ns, slba);
-
-    if (zone_idx >= ns->num_zones) {
-        return NULL;
-    }
-
-    return &ns->zone_array[zone_idx];
 }
 
 static uint16_t nvme_check_zone_state_for_write(NvmeZone *zone)

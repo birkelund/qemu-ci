@@ -20,10 +20,10 @@
 #include "sysemu/block-backend.h"
 
 #include "nvme.h"
+#include "zns.h"
 #include "trace.h"
 
 #define MIN_DISCARD_GRANULARITY (4 * KiB)
-#define NVME_DEFAULT_ZONE_SIZE   (128 * MiB)
 
 void nvme_ns_init_format(NvmeNamespace *ns)
 {
