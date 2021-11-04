@@ -93,4 +93,11 @@ static inline void nvme_zns_aor_dec_active(NvmeNamespace *ns)
     assert(ns->nr_active_zones >= 0);
 }
 
+void nvme_zns_assign_state(NvmeNamespace *ns, NvmeZone *zone,
+                           NvmeZoneState state);
+int nvme_zns_aor_check(NvmeNamespace *ns, uint32_t act, uint32_t opn);
+void nvme_zns_init_state(NvmeNamespace *ns);
+void nvme_zns_clear_zone(NvmeNamespace *ns, NvmeZone *zone);
+void nvme_zns_shutdown(NvmeNamespace *ns);
+
 #endif /* HW_NVME_ZNS_H */
