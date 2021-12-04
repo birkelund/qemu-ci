@@ -5185,7 +5185,7 @@ static uint16_t nvme_ns_attachment(NvmeCtrl *n, NvmeRequest *req)
                 return NVME_NS_ALREADY_ATTACHED | NVME_DNR;
             }
 
-            if (ns->attached && !ns->params.shared) {
+            if (ns->attached && !(ns->flags & NVME_NS_SHARED)) {
                 return NVME_NS_PRIVATE | NVME_DNR;
             }
 
@@ -5263,6 +5263,18 @@ static void nvme_format_set(NvmeNamespace *ns, uint8_t lbaf, uint8_t mset,
                             uint8_t pi, uint8_t pil)
 {
     trace_pci_nvme_format_set(ns->nsid, lbaf, mset, pi, pil);
+
+    ns->flags &= ~(NVME_NS_NVM_EXTENDED_LBA | NVME_NS_NVM_PROT_FIRST);
+
+    if (mset) {
+        ns->flags |= NVME_NS_NVM_EXTENDED_LBA;
+    }
+
+    ns->pi_type = pi;
+
+    if (pil) {
+        ns->flags |= NVME_NS_NVM_PROT_FIRST;
+    }
 
     ns->id_ns.dps = (pil << 3) | pi;
     ns->id_ns.flbas = lbaf | (mset << 4);

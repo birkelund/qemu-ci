@@ -70,7 +70,7 @@ static int nvme_ns_init(NvmeNamespace *ns, Error **errp)
     /* support DULBE and I/O optimization fields */
     id_ns->nsfeat |= (0x4 | 0x10);
 
-    if (ns->params.shared) {
+    if (ns->flags & NVME_NS_SHARED) {
         id_ns->nmic |= NVME_NMIC_NS_SHARED;
     }
 
@@ -91,13 +91,13 @@ static int nvme_ns_init(NvmeNamespace *ns, Error **errp)
 
     id_ns->mc = NVME_ID_NS_MC_EXTENDED | NVME_ID_NS_MC_SEPARATE;
 
-    if (ms && ns->params.mset) {
+    if (ns->flags & NVME_NS_NVM_EXTENDED_LBA) {
         id_ns->flbas |= NVME_ID_NS_FLBAS_EXTENDED;
     }
 
     id_ns->dpc = 0x1f;
     id_ns->dps = ns->pi_type;
-    if (ns->pi_type && ns->params.pil) {
+    if (ns->pi_type && (ns->flags & NVME_NS_NVM_PROT_FIRST)) {
         id_ns->dps |= NVME_ID_NS_DPS_FIRST_EIGHT;
     }
 
@@ -268,6 +268,18 @@ static void nvme_ns_set_params(NvmeNamespace *ns, NvmeNamespaceParams *params)
 {
     ns->nsid = params->nsid;
     ns->pi_type = params->pi;
+
+    if (params->shared) {
+        ns->flags |= NVME_NS_SHARED;
+    }
+
+    if (params->mset) {
+        ns->flags |= NVME_NS_NVM_EXTENDED_LBA;
+    }
+
+    if (params->pil) {
+        ns->flags |= NVME_NS_NVM_PROT_FIRST;
+    }
 }
 
 int nvme_ns_setup(NvmeNamespace *ns, Error **errp)

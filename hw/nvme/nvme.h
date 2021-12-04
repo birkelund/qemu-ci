@@ -130,6 +130,12 @@ typedef struct NvmeNamespace {
     uint32_t nsid;
     uint8_t  pi_type;
 
+#define NVME_NS_SHARED              (1 << 0)
+#define NVME_NS_DETACHED            (1 << 1)
+#define NVME_NS_NVM_EXTENDED_LBA    (1 << 2)
+#define NVME_NS_NVM_PROT_FIRST      (1 << 3)
+    unsigned long flags;
+
     const uint32_t *iocs;
     uint8_t      csi;
     uint16_t     status;
