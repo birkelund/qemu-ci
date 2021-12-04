@@ -4646,14 +4646,14 @@ static uint16_t nvme_identify_ns_descr_list(NvmeCtrl *n, NvmeRequest *req)
      */
     uuid.hdr.nidt = NVME_NIDT_UUID;
     uuid.hdr.nidl = NVME_NIDL_UUID;
-    memcpy(uuid.v, ns->params.uuid.data, NVME_NIDL_UUID);
+    memcpy(uuid.v, ns->uuid.data, NVME_NIDL_UUID);
     memcpy(pos, &uuid, sizeof(uuid));
     pos += sizeof(uuid);
 
-    if (ns->params.eui64) {
+    if (ns->eui64.v) {
         eui64.hdr.nidt = NVME_NIDT_EUI64;
         eui64.hdr.nidl = NVME_NIDL_EUI64;
-        eui64.v = cpu_to_be64(ns->params.eui64);
+        eui64.v = cpu_to_be64(ns->eui64.v);
         memcpy(pos, &eui64, sizeof(eui64));
         pos += sizeof(eui64);
     }
