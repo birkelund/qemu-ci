@@ -264,6 +264,11 @@ static int nvme_ns_check_constraints(NvmeNamespace *ns, Error **errp)
     return 0;
 }
 
+static void nvme_ns_set_params(NvmeNamespace *ns, NvmeNamespaceParams *params)
+{
+    ns->nsid = params->nsid;
+}
+
 int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
 {
     ns->blk = ns->blkconf.blk;
@@ -271,6 +276,8 @@ int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
     if (nvme_ns_check_constraints(ns, errp)) {
         return -1;
     }
+
+    nvme_ns_set_params(ns, &ns->params);
 
     if (nvme_ns_init_blk(ns, errp)) {
         return -1;
@@ -353,7 +360,7 @@ static void nvme_ns_realize(DeviceState *dev, Error **errp)
                 continue;
             }
 
-            nsid = ns->params.nsid = i;
+            nsid = ns->nsid = i;
             break;
         }
 

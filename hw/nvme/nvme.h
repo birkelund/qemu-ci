@@ -126,6 +126,9 @@ typedef struct NvmeNamespace {
     NvmeIdNs     id_ns;
     NvmeLBAF     lbaf;
     size_t       lbasz;
+
+    uint32_t nsid;
+
     const uint32_t *iocs;
     uint8_t      csi;
     uint16_t     status;
@@ -157,7 +160,7 @@ typedef struct NvmeNamespace {
 static inline uint32_t nvme_nsid(NvmeNamespace *ns)
 {
     if (ns) {
-        return ns->params.nsid;
+        return ns->nsid;
     }
 
     return 0;

@@ -4548,10 +4548,10 @@ static uint16_t nvme_identify_nslist(NvmeCtrl *n, NvmeRequest *req,
                 continue;
             }
         }
-        if (ns->params.nsid <= min_nsid) {
+        if (ns->nsid <= min_nsid) {
             continue;
         }
-        list_ptr[j++] = cpu_to_le32(ns->params.nsid);
+        list_ptr[j++] = cpu_to_le32(ns->nsid);
         if (j == data_len / sizeof(uint32_t)) {
             break;
         }
@@ -4596,10 +4596,10 @@ static uint16_t nvme_identify_nslist_csi(NvmeCtrl *n, NvmeRequest *req,
                 continue;
             }
         }
-        if (ns->params.nsid <= min_nsid || c->csi != ns->csi) {
+        if (ns->nsid <= min_nsid || c->csi != ns->csi) {
             continue;
         }
-        list_ptr[j++] = cpu_to_le32(ns->params.nsid);
+        list_ptr[j++] = cpu_to_le32(ns->nsid);
         if (j == data_len / sizeof(uint32_t)) {
             break;
         }
@@ -5262,7 +5262,7 @@ static const AIOCBInfo nvme_format_aiocb_info = {
 static void nvme_format_set(NvmeNamespace *ns, uint8_t lbaf, uint8_t mset,
                             uint8_t pi, uint8_t pil)
 {
-    trace_pci_nvme_format_set(ns->params.nsid, lbaf, mset, pi, pil);
+    trace_pci_nvme_format_set(ns->nsid, lbaf, mset, pi, pil);
 
     ns->id_ns.dps = (pil << 3) | pi;
     ns->id_ns.flbas = lbaf | (mset << 4);
@@ -6473,7 +6473,7 @@ static int nvme_init_subsys(NvmeCtrl *n, Error **errp)
 
 void nvme_attach_ns(NvmeCtrl *n, NvmeNamespace *ns)
 {
-    uint32_t nsid = ns->params.nsid;
+    uint32_t nsid = ns->nsid;
     assert(nsid && nsid <= NVME_MAX_NAMESPACES);
 
     n->namespaces[nsid] = ns;
@@ -6512,7 +6512,7 @@ static void nvme_realize(PCIDevice *pci_dev, Error **errp)
     /* setup a namespace if the controller drive property was given */
     if (n->namespace.blkconf.blk) {
         ns = &n->namespace;
-        ns->params.nsid = 1;
+        ns->nsid = 1;
 
         if (nvme_ns_setup(ns, errp)) {
             return;
