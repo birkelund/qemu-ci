@@ -46,7 +46,7 @@ void nvme_ns_init_format(NvmeNamespace *ns)
 
     npdg = ns->blkconf.discard_granularity / ns->lbasz;
 
-    ret = bdrv_get_info(blk_bs(ns->blkconf.blk), &bdi);
+    ret = bdrv_get_info(blk_bs(ns->blk), &bdi);
     if (ret >= 0 && bdi.cluster_size > ns->blkconf.discard_granularity) {
         npdg = bdi.cluster_size / ns->lbasz;
     }
@@ -145,7 +145,7 @@ static int nvme_ns_init_blk(NvmeNamespace *ns, Error **errp)
         return -1;
     }
 
-    read_only = !blk_supports_write_perm(ns->blkconf.blk);
+    read_only = !blk_supports_write_perm(ns->blk);
     if (!blkconf_apply_backend_options(&ns->blkconf, read_only, false, errp)) {
         return -1;
     }
@@ -155,7 +155,7 @@ static int nvme_ns_init_blk(NvmeNamespace *ns, Error **errp)
             MAX(ns->blkconf.logical_block_size, MIN_DISCARD_GRANULARITY);
     }
 
-    ns->size = blk_getlength(ns->blkconf.blk);
+    ns->size = blk_getlength(ns->blk);
     if (ns->size < 0) {
         error_setg_errno(errp, -ns->size, "could not get blockdev size");
         return -1;
@@ -266,6 +266,8 @@ static int nvme_ns_check_constraints(NvmeNamespace *ns, Error **errp)
 
 int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
 {
+    ns->blk = ns->blkconf.blk;
+
     if (nvme_ns_check_constraints(ns, errp)) {
         return -1;
     }
@@ -289,12 +291,12 @@ int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
 
 void nvme_ns_drain(NvmeNamespace *ns)
 {
-    blk_drain(ns->blkconf.blk);
+    blk_drain(ns->blk);
 }
 
 void nvme_ns_shutdown(NvmeNamespace *ns)
 {
-    blk_flush(ns->blkconf.blk);
+    blk_flush(ns->blk);
     if (ns->params.zoned) {
         nvme_zns_shutdown(ns);
     }

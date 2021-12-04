@@ -1423,7 +1423,7 @@ static inline uint16_t nvme_check_bounds(NvmeNamespace *ns, uint64_t slba,
 static int nvme_block_status_all(NvmeNamespace *ns, uint64_t slba,
                                  uint32_t nlb, int flags)
 {
-    BlockDriverState *bs = blk_bs(ns->blkconf.blk);
+    BlockDriverState *bs = blk_bs(ns->blk);
 
     int64_t pnum = 0, bytes = nvme_l2b(ns, nlb);
     int64_t offset = nvme_l2b(ns, slba);
@@ -1822,7 +1822,7 @@ void nvme_rw_complete_cb(void *opaque, int ret)
 {
     NvmeRequest *req = opaque;
     NvmeNamespace *ns = req->ns;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     BlockAcctCookie *acct = &req->acct;
     BlockAcctStats *stats = blk_get_stats(blk);
 
@@ -1847,7 +1847,7 @@ static void nvme_rw_cb(void *opaque, int ret)
     NvmeRequest *req = opaque;
     NvmeNamespace *ns = req->ns;
 
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
 
     trace_pci_nvme_rw_cb(nvme_cid(req), blk_name(blk));
 
@@ -1897,7 +1897,7 @@ static void nvme_verify_cb(void *opaque, int ret)
     NvmeBounceContext *ctx = opaque;
     NvmeRequest *req = ctx->req;
     NvmeNamespace *ns = req->ns;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     BlockAcctCookie *acct = &req->acct;
     BlockAcctStats *stats = blk_get_stats(blk);
     NvmeRwCmd *rw = (NvmeRwCmd *)&req->cmd;
@@ -1954,7 +1954,7 @@ static void nvme_verify_mdata_in_cb(void *opaque, int ret)
     uint32_t nlb = le16_to_cpu(rw->nlb) + 1;
     size_t mlen = nvme_m2b(ns, nlb);
     uint64_t offset = nvme_moff(ns, slba);
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
 
     trace_pci_nvme_verify_mdata_in_cb(nvme_cid(req), blk_name(blk));
 
@@ -1999,7 +1999,7 @@ static void nvme_compare_mdata_cb(void *opaque, int ret)
     uint32_t reftag = le32_to_cpu(rw->reftag);
     struct nvme_compare_ctx *ctx = req->opaque;
     g_autofree uint8_t *buf = NULL;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     BlockAcctCookie *acct = &req->acct;
     BlockAcctStats *stats = blk_get_stats(blk);
     uint16_t status = NVME_SUCCESS;
@@ -2078,7 +2078,7 @@ static void nvme_compare_data_cb(void *opaque, int ret)
     NvmeRequest *req = opaque;
     NvmeCtrl *n = nvme_ctrl(req);
     NvmeNamespace *ns = req->ns;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     BlockAcctCookie *acct = &req->acct;
     BlockAcctStats *stats = blk_get_stats(blk);
 
@@ -2223,7 +2223,7 @@ static void nvme_dsm_md_cb(void *opaque, int ret)
         nvme_dsm_cb(iocb, 0);
     }
 
-    iocb->aiocb = blk_aio_pwrite_zeroes(ns->blkconf.blk, nvme_moff(ns, slba),
+    iocb->aiocb = blk_aio_pwrite_zeroes(ns->blk, nvme_moff(ns, slba),
                                         nvme_m2b(ns, nlb), BDRV_REQ_MAY_UNMAP,
                                         nvme_dsm_cb, iocb);
     return;
@@ -2270,7 +2270,7 @@ next:
         goto next;
     }
 
-    iocb->aiocb = blk_aio_pdiscard(ns->blkconf.blk, nvme_l2b(ns, slba),
+    iocb->aiocb = blk_aio_pdiscard(ns->blk, nvme_l2b(ns, slba),
                                    nvme_l2b(ns, nlb),
                                    nvme_dsm_md_cb, iocb);
     return;
@@ -2291,7 +2291,7 @@ static uint16_t nvme_dsm(NvmeCtrl *n, NvmeRequest *req)
     trace_pci_nvme_dsm(nr, attr);
 
     if (attr & NVME_DSMGMT_AD) {
-        NvmeDSMAIOCB *iocb = blk_aio_get(&nvme_dsm_aiocb_info, ns->blkconf.blk,
+        NvmeDSMAIOCB *iocb = blk_aio_get(&nvme_dsm_aiocb_info, ns->blk,
                                          nvme_misc_cb, req);
 
         iocb->req = req;
@@ -2320,7 +2320,7 @@ static uint16_t nvme_verify(NvmeCtrl *n, NvmeRequest *req)
 {
     NvmeRwCmd *rw = (NvmeRwCmd *)&req->cmd;
     NvmeNamespace *ns = req->ns;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     uint64_t slba = le64_to_cpu(rw->slba);
     uint32_t nlb = le16_to_cpu(rw->nlb) + 1;
     size_t len = nvme_l2b(ns, nlb);
@@ -2370,7 +2370,7 @@ static uint16_t nvme_verify(NvmeCtrl *n, NvmeRequest *req)
     block_acct_start(blk_get_stats(blk), &req->acct, ctx->data.iov.size,
                      BLOCK_ACCT_READ);
 
-    req->aiocb = blk_aio_preadv(ns->blkconf.blk, offset, &ctx->data.iov, 0,
+    req->aiocb = blk_aio_preadv(ns->blk, offset, &ctx->data.iov, 0,
                                 nvme_verify_mdata_in_cb, ctx);
     return NVME_NO_COMPLETE;
 }
@@ -2421,7 +2421,7 @@ static void nvme_copy_bh(void *opaque)
     NvmeCopyAIOCB *iocb = opaque;
     NvmeRequest *req = iocb->req;
     NvmeNamespace *ns = req->ns;
-    BlockAcctStats *stats = blk_get_stats(ns->blkconf.blk);
+    BlockAcctStats *stats = blk_get_stats(ns->blk);
 
     if (iocb->idx != iocb->nr) {
         req->cqe.result = cpu_to_le32(iocb->idx);
@@ -2503,7 +2503,7 @@ static void nvme_copy_out_cb(void *opaque, int ret)
     qemu_iovec_reset(&iocb->iov);
     qemu_iovec_add(&iocb->iov, mbounce, mlen);
 
-    iocb->aiocb = blk_aio_pwritev(ns->blkconf.blk, nvme_moff(ns, iocb->slba),
+    iocb->aiocb = blk_aio_pwritev(ns->blk, nvme_moff(ns, iocb->slba),
                                   &iocb->iov, 0, nvme_copy_out_completed_cb,
                                   iocb);
 
@@ -2594,7 +2594,7 @@ static void nvme_copy_in_completed_cb(void *opaque, int ret)
     qemu_iovec_reset(&iocb->iov);
     qemu_iovec_add(&iocb->iov, iocb->bounce, len);
 
-    iocb->aiocb = blk_aio_pwritev(ns->blkconf.blk, nvme_l2b(ns, iocb->slba),
+    iocb->aiocb = blk_aio_pwritev(ns->blk, nvme_l2b(ns, iocb->slba),
                                   &iocb->iov, 0, nvme_copy_out_cb, iocb);
 
     return;
@@ -2641,7 +2641,7 @@ static void nvme_copy_in_cb(void *opaque, int ret)
     qemu_iovec_add(&iocb->iov, iocb->bounce + nvme_l2b(ns, nlb),
                    nvme_m2b(ns, nlb));
 
-    iocb->aiocb = blk_aio_preadv(ns->blkconf.blk, nvme_moff(ns, slba),
+    iocb->aiocb = blk_aio_preadv(ns->blk, nvme_moff(ns, slba),
                                  &iocb->iov, 0, nvme_copy_in_completed_cb,
                                  iocb);
     return;
@@ -2706,7 +2706,7 @@ static void nvme_copy_cb(void *opaque, int ret)
     qemu_iovec_reset(&iocb->iov);
     qemu_iovec_add(&iocb->iov, iocb->bounce, len);
 
-    iocb->aiocb = blk_aio_preadv(ns->blkconf.blk, nvme_l2b(ns, slba),
+    iocb->aiocb = blk_aio_preadv(ns->blk, nvme_l2b(ns, slba),
                                  &iocb->iov, 0, nvme_copy_in_cb, iocb);
     return;
 
@@ -2724,7 +2724,7 @@ static uint16_t nvme_copy(NvmeCtrl *n, NvmeRequest *req)
 {
     NvmeNamespace *ns = req->ns;
     NvmeCopyCmd *copy = (NvmeCopyCmd *)&req->cmd;
-    NvmeCopyAIOCB *iocb = blk_aio_get(&nvme_copy_aiocb_info, ns->blkconf.blk,
+    NvmeCopyAIOCB *iocb = blk_aio_get(&nvme_copy_aiocb_info, ns->blk,
                                       nvme_misc_cb, req);
     uint16_t nr = copy->nr + 1;
     uint8_t format = copy->control[0] & 0xf;
@@ -2789,9 +2789,9 @@ static uint16_t nvme_copy(NvmeCtrl *n, NvmeRequest *req)
 
     qemu_iovec_init(&iocb->iov, 1);
 
-    block_acct_start(blk_get_stats(ns->blkconf.blk), &iocb->acct.read, 0,
+    block_acct_start(blk_get_stats(ns->blk), &iocb->acct.read, 0,
                      BLOCK_ACCT_READ);
-    block_acct_start(blk_get_stats(ns->blkconf.blk), &iocb->acct.write, 0,
+    block_acct_start(blk_get_stats(ns->blk), &iocb->acct.write, 0,
                      BLOCK_ACCT_WRITE);
 
     req->aiocb = &iocb->common;
@@ -2809,7 +2809,7 @@ static uint16_t nvme_compare(NvmeCtrl *n, NvmeRequest *req)
 {
     NvmeRwCmd *rw = (NvmeRwCmd *)&req->cmd;
     NvmeNamespace *ns = req->ns;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     uint64_t slba = le64_to_cpu(rw->slba);
     uint32_t nlb = le16_to_cpu(rw->nlb) + 1;
     uint8_t prinfo = NVME_RW_PRINFO(le16_to_cpu(rw->control));
@@ -2912,7 +2912,7 @@ static void nvme_flush_ns_cb(void *opaque, int ret)
         trace_pci_nvme_flush_ns(iocb->nsid);
 
         iocb->ns = NULL;
-        iocb->aiocb = blk_aio_flush(ns->blkconf.blk, nvme_flush_ns_cb, iocb);
+        iocb->aiocb = blk_aio_flush(ns->blk, nvme_flush_ns_cb, iocb);
         return;
     }
 
@@ -3013,7 +3013,7 @@ static uint16_t nvme_read(NvmeCtrl *n, NvmeRequest *req)
     uint64_t data_size = nvme_l2b(ns, nlb);
     uint64_t mapped_size = data_size;
     uint64_t data_offset;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     uint16_t status;
 
     if (nvme_ns_ext(ns)) {
@@ -3090,7 +3090,7 @@ static uint16_t nvme_do_write(NvmeCtrl *n, NvmeRequest *req, bool append,
     uint64_t data_offset;
     NvmeZone *zone;
     NvmeZonedResult *res = (NvmeZonedResult *)&req->cqe;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     uint16_t status;
 
     if (nvme_ns_ext(ns)) {
@@ -3472,7 +3472,7 @@ static void nvme_zone_reset_epilogue_cb(void *opaque, int ret)
     moff = nvme_moff(ns, iocb->zone->d.zslba);
     count = nvme_m2b(ns, ns->zone_size);
 
-    iocb->aiocb = blk_aio_pwrite_zeroes(ns->blkconf.blk, moff, count,
+    iocb->aiocb = blk_aio_pwrite_zeroes(ns->blk, moff, count,
                                         BDRV_REQ_MAY_UNMAP,
                                         nvme_zone_reset_cb, iocb);
     return;
@@ -3521,7 +3521,7 @@ static void nvme_zone_reset_cb(void *opaque, int ret)
 
         trace_pci_nvme_zns_zone_reset(zone->d.zslba);
 
-        iocb->aiocb = blk_aio_pwrite_zeroes(ns->blkconf.blk,
+        iocb->aiocb = blk_aio_pwrite_zeroes(ns->blk,
                                             nvme_l2b(ns, zone->d.zslba),
                                             nvme_l2b(ns, ns->zone_size),
                                             BDRV_REQ_MAY_UNMAP,
@@ -3599,7 +3599,7 @@ static uint16_t nvme_zone_mgmt_send(NvmeCtrl *n, NvmeRequest *req)
     case NVME_ZONE_ACTION_RESET:
         trace_pci_nvme_reset_zone(slba, zone_idx, all);
 
-        iocb = blk_aio_get(&nvme_zone_reset_aiocb_info, ns->blkconf.blk,
+        iocb = blk_aio_get(&nvme_zone_reset_aiocb_info, ns->blk,
                            nvme_misc_cb, req);
 
         iocb->req = req;
@@ -4000,7 +4000,7 @@ struct nvme_stats {
 
 static void nvme_set_blk_stats(NvmeNamespace *ns, struct nvme_stats *stats)
 {
-    BlockAcctStats *s = blk_get_stats(ns->blkconf.blk);
+    BlockAcctStats *s = blk_get_stats(ns->blk);
 
     stats->units_read += s->nr_bytes[BLOCK_ACCT_READ] >> BDRV_SECTOR_BITS;
     stats->units_written += s->nr_bytes[BLOCK_ACCT_WRITE] >> BDRV_SECTOR_BITS;
@@ -4870,7 +4870,7 @@ static uint16_t nvme_get_feature(NvmeCtrl *n, NvmeRequest *req)
                 continue;
             }
 
-            result = blk_enable_write_cache(ns->blkconf.blk);
+            result = blk_enable_write_cache(ns->blk);
             if (result) {
                 break;
             }
@@ -5038,11 +5038,11 @@ static uint16_t nvme_set_feature(NvmeCtrl *n, NvmeRequest *req)
                 continue;
             }
 
-            if (!(dw11 & 0x1) && blk_enable_write_cache(ns->blkconf.blk)) {
-                blk_flush(ns->blkconf.blk);
+            if (!(dw11 & 0x1) && blk_enable_write_cache(ns->blk)) {
+                blk_flush(ns->blk);
             }
 
-            blk_set_enable_write_cache(ns->blkconf.blk, dw11 & 1);
+            blk_set_enable_write_cache(ns->blk, dw11 & 1);
         }
 
         break;
@@ -5287,7 +5287,7 @@ static void nvme_format_ns_cb(void *opaque, int ret)
     if (iocb->offset < ns->size) {
         bytes = MIN(BDRV_REQUEST_MAX_BYTES, ns->size - iocb->offset);
 
-        iocb->aiocb = blk_aio_pwrite_zeroes(ns->blkconf.blk, iocb->offset,
+        iocb->aiocb = blk_aio_pwrite_zeroes(ns->blk, iocb->offset,
                                             bytes, BDRV_REQ_MAY_UNMAP,
                                             nvme_format_ns_cb, iocb);
 

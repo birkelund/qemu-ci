@@ -119,6 +119,7 @@ typedef struct NvmeNamespaceParams {
 typedef struct NvmeNamespace {
     DeviceState  parent_obj;
     BlockConf    blkconf;
+    BlockBackend *blk;
     int32_t      bootindex;
     int64_t      size;
     int64_t      moff;

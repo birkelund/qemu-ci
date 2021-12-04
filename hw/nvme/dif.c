@@ -170,7 +170,7 @@ uint16_t nvme_dif_check(NvmeNamespace *ns, uint8_t *buf, size_t len,
 uint16_t nvme_dif_mangle_mdata(NvmeNamespace *ns, uint8_t *mbuf, size_t mlen,
                                uint64_t slba)
 {
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     BlockDriverState *bs = blk_bs(blk);
 
     int64_t moffset = 0, offset = nvme_l2b(ns, slba);
@@ -226,7 +226,7 @@ static void nvme_dif_rw_cb(void *opaque, int ret)
     NvmeBounceContext *ctx = opaque;
     NvmeRequest *req = ctx->req;
     NvmeNamespace *ns = req->ns;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
 
     trace_pci_nvme_dif_rw_cb(nvme_cid(req), blk_name(blk));
 
@@ -308,7 +308,7 @@ static void nvme_dif_rw_mdata_in_cb(void *opaque, int ret)
     uint32_t nlb = le16_to_cpu(rw->nlb) + 1;
     size_t mlen = nvme_m2b(ns, nlb);
     uint64_t offset = nvme_moff(ns, slba);
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
 
     trace_pci_nvme_dif_rw_mdata_in_cb(nvme_cid(req), blk_name(blk));
 
@@ -337,7 +337,7 @@ static void nvme_dif_rw_mdata_out_cb(void *opaque, int ret)
     NvmeRwCmd *rw = (NvmeRwCmd *)&req->cmd;
     uint64_t slba = le64_to_cpu(rw->slba);
     uint64_t offset = nvme_moff(ns, slba);
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
 
     trace_pci_nvme_dif_rw_mdata_out_cb(nvme_cid(req), blk_name(blk));
 
@@ -357,7 +357,7 @@ uint16_t nvme_dif_rw(NvmeCtrl *n, NvmeRequest *req)
 {
     NvmeRwCmd *rw = (NvmeRwCmd *)&req->cmd;
     NvmeNamespace *ns = req->ns;
-    BlockBackend *blk = ns->blkconf.blk;
+    BlockBackend *blk = ns->blk;
     bool wrz = rw->opcode == NVME_CMD_WRITE_ZEROES;
     uint32_t nlb = le16_to_cpu(rw->nlb) + 1;
     uint64_t slba = le64_to_cpu(rw->slba);
@@ -446,7 +446,7 @@ uint16_t nvme_dif_rw(NvmeCtrl *n, NvmeRequest *req)
         block_acct_start(blk_get_stats(blk), &req->acct, ctx->data.iov.size,
                          BLOCK_ACCT_READ);
 
-        req->aiocb = blk_aio_preadv(ns->blkconf.blk, offset, &ctx->data.iov, 0,
+        req->aiocb = blk_aio_preadv(ns->blk, offset, &ctx->data.iov, 0,
                                     nvme_dif_rw_mdata_in_cb, ctx);
         return NVME_NO_COMPLETE;
     }
@@ -492,7 +492,7 @@ uint16_t nvme_dif_rw(NvmeCtrl *n, NvmeRequest *req)
     block_acct_start(blk_get_stats(blk), &req->acct, ctx->data.iov.size,
                      BLOCK_ACCT_WRITE);
 
-    req->aiocb = blk_aio_pwritev(ns->blkconf.blk, offset, &ctx->data.iov, 0,
+    req->aiocb = blk_aio_pwritev(ns->blk, offset, &ctx->data.iov, 0,
                                  nvme_dif_rw_mdata_out_cb, ctx);
 
     return NVME_NO_COMPLETE;
