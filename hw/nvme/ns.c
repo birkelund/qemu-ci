@@ -288,6 +288,18 @@ static void nvme_ns_set_params(NvmeNamespace *ns, NvmeNamespaceParams *params)
     if (params->pil) {
         ns->flags |= NVME_NS_NVM_PROT_FIRST;
     }
+
+    if (params->zoned) {
+        ns->flags |= NVME_NS_ZONED;
+
+        ns->zd_extension_size = params->zd_extension_size;
+        ns->max_open_zones = params->max_open_zones;
+        ns->max_active_zones = params->max_active_zones;
+
+        if (params->cross_zone_read) {
+            ns->flags |= NVME_NS_ZONED_CROSS_READ;
+        }
+    }
 }
 
 int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
@@ -315,7 +327,7 @@ int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
     if (nvme_ns_init(ns, errp)) {
         return -1;
     }
-    if (ns->params.zoned) {
+    if (ns->flags & NVME_NS_ZONED) {
         if (nvme_zns_check_calc_geometry(ns, errp) != 0) {
             return -1;
         }
@@ -333,14 +345,14 @@ void nvme_ns_drain(NvmeNamespace *ns)
 void nvme_ns_shutdown(NvmeNamespace *ns)
 {
     blk_flush(ns->blk);
-    if (ns->params.zoned) {
+    if (ns->flags & NVME_NS_ZONED) {
         nvme_zns_shutdown(ns);
     }
 }
 
 void nvme_ns_cleanup(NvmeNamespace *ns)
 {
-    if (ns->params.zoned) {
+    if (ns->flags & NVME_NS_ZONED) {
         nvme_zns_cleanup(ns);
     }
 }

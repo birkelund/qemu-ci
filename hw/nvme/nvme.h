@@ -147,6 +147,8 @@ typedef struct NvmeNamespace {
 #define NVME_NS_NVM_EXTENDED_LBA    (1 << 2)
 #define NVME_NS_NVM_PROT_FIRST      (1 << 3)
 #define NVME_NS_EUI64_SET_DEFAULT   (1 << 4)
+#define NVME_NS_ZONED               (1 << 5)
+#define NVME_NS_ZONED_CROSS_READ    (1 << 6)
     unsigned long flags;
 
     const uint32_t *iocs;
@@ -166,8 +168,11 @@ typedef struct NvmeNamespace {
     uint64_t        zone_size;
     uint64_t        zone_capacity;
     uint32_t        zone_size_log2;
+    uint32_t        zd_extension_size;
     uint8_t         *zd_extensions;
+    uint32_t        max_open_zones;
     int32_t         nr_open_zones;
+    uint32_t        max_active_zones;
     int32_t         nr_active_zones;
 
     NvmeNamespaceParams params;

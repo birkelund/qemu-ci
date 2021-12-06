@@ -53,21 +53,21 @@ static inline bool nvme_zns_wp_valid(NvmeZone *zone)
 
 static inline uint8_t *nvme_zns_zde(NvmeNamespace *ns, uint32_t zone_idx)
 {
-    return &ns->zd_extensions[zone_idx * ns->params.zd_extension_size];
+    return &ns->zd_extensions[zone_idx * ns->zd_extension_size];
 }
 
 static inline void nvme_zns_aor_inc_open(NvmeNamespace *ns)
 {
     assert(ns->nr_open_zones >= 0);
-    if (ns->params.max_open_zones) {
+    if (ns->max_open_zones) {
         ns->nr_open_zones++;
-        assert(ns->nr_open_zones <= ns->params.max_open_zones);
+        assert(ns->nr_open_zones <= ns->max_open_zones);
     }
 }
 
 static inline void nvme_zns_aor_dec_open(NvmeNamespace *ns)
 {
-    if (ns->params.max_open_zones) {
+    if (ns->max_open_zones) {
         assert(ns->nr_open_zones > 0);
         ns->nr_open_zones--;
     }
@@ -77,15 +77,15 @@ static inline void nvme_zns_aor_dec_open(NvmeNamespace *ns)
 static inline void nvme_zns_aor_inc_active(NvmeNamespace *ns)
 {
     assert(ns->nr_active_zones >= 0);
-    if (ns->params.max_active_zones) {
+    if (ns->max_active_zones) {
         ns->nr_active_zones++;
-        assert(ns->nr_active_zones <= ns->params.max_active_zones);
+        assert(ns->nr_active_zones <= ns->max_active_zones);
     }
 }
 
 static inline void nvme_zns_aor_dec_active(NvmeNamespace *ns)
 {
-    if (ns->params.max_active_zones) {
+    if (ns->max_active_zones) {
         assert(ns->nr_active_zones > 0);
         ns->nr_active_zones--;
         assert(ns->nr_active_zones >= ns->nr_open_zones);

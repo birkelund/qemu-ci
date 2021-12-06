@@ -51,14 +51,14 @@ void nvme_zns_assign_state(NvmeNamespace *ns, NvmeZone *zone,
  */
 int nvme_zns_aor_check(NvmeNamespace *ns, uint32_t act, uint32_t opn)
 {
-    if (ns->params.max_active_zones != 0 &&
-        ns->nr_active_zones + act > ns->params.max_active_zones) {
-        trace_pci_nvme_err_insuff_active_res(ns->params.max_active_zones);
+    if (ns->max_active_zones != 0 &&
+        ns->nr_active_zones + act > ns->max_active_zones) {
+        trace_pci_nvme_err_insuff_active_res(ns->max_active_zones);
         return NVME_ZONE_TOO_MANY_ACTIVE | NVME_DNR;
     }
-    if (ns->params.max_open_zones != 0 &&
-        ns->nr_open_zones + opn > ns->params.max_open_zones) {
-        trace_pci_nvme_err_insuff_open_res(ns->params.max_open_zones);
+    if (ns->max_open_zones != 0 &&
+        ns->nr_open_zones + opn > ns->max_open_zones) {
+        trace_pci_nvme_err_insuff_open_res(ns->max_open_zones);
         return NVME_ZONE_TOO_MANY_OPEN | NVME_DNR;
     }
 
@@ -73,8 +73,8 @@ void nvme_zns_init_state(NvmeNamespace *ns)
     int i;
 
     ns->zone_array = g_new0(NvmeZone, ns->num_zones);
-    if (ns->params.zd_extension_size) {
-        ns->zd_extensions = g_malloc0(ns->params.zd_extension_size *
+    if (ns->zd_extension_size) {
+        ns->zd_extensions = g_malloc0(ns->zd_extension_size *
                                       ns->num_zones);
     }
 
@@ -114,15 +114,18 @@ void nvme_zns_init(NvmeNamespace *ns)
     id_ns_z = g_malloc0(sizeof(NvmeIdNsZoned));
 
     /* MAR/MOR are zeroes-based, FFFFFFFFFh means no limit */
-    id_ns_z->mar = cpu_to_le32(ns->params.max_active_zones - 1);
-    id_ns_z->mor = cpu_to_le32(ns->params.max_open_zones - 1);
+    id_ns_z->mar = cpu_to_le32(ns->max_active_zones - 1);
+    id_ns_z->mor = cpu_to_le32(ns->max_open_zones - 1);
     id_ns_z->zoc = 0;
-    id_ns_z->ozcs = ns->params.cross_zone_read ? 0x01 : 0x00;
+
+    if (ns->flags & NVME_NS_ZONED_CROSS_READ) {
+        id_ns_z->ozcs |= NVME_ID_NS_ZONED_OZCS_CROSS_READ;
+    }
 
     for (i = 0; i <= ns->id_ns.nlbaf; i++) {
         id_ns_z->lbafe[i].zsze = cpu_to_le64(ns->zone_size);
         id_ns_z->lbafe[i].zdes =
-            ns->params.zd_extension_size >> 6; /* Units of 64B */
+            ns->zd_extension_size >> 6; /* Units of 64B */
     }
 
     ns->csi = NVME_CSI_ZONED;
