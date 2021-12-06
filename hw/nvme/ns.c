@@ -76,9 +76,9 @@ static int nvme_ns_init(NvmeNamespace *ns, Error **errp)
     id_ns->eui64 = cpu_to_be64(ns->eui64.v);
 
     /* simple copy */
-    id_ns->mssrl = cpu_to_le16(ns->params.mssrl);
-    id_ns->mcl = cpu_to_le32(ns->params.mcl);
-    id_ns->msrc = ns->params.msrc;
+    id_ns->mssrl = cpu_to_le16(ns->scc.mssrl);
+    id_ns->mcl = cpu_to_le32(ns->scc.mcl);
+    id_ns->msrc = ns->scc.msrc;
 
     ds = 31 - clz32(ns->blkconf.logical_block_size);
     ms = ns->params.ms;
@@ -262,6 +262,10 @@ static void nvme_ns_set_params(NvmeNamespace *ns, NvmeNamespaceParams *params)
 {
     ns->nsid = params->nsid;
     ns->pi_type = params->pi;
+
+    ns->scc.mssrl = params->mssrl;
+    ns->scc.mcl = params->mcl;
+    ns->scc.msrc = params->msrc;
 
     memcpy(&ns->uuid, &params->uuid, sizeof(ns->uuid));
 

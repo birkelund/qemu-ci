@@ -136,6 +136,12 @@ typedef struct NvmeNamespace {
         uint8_t  a[8];
     } eui64;
 
+    struct {
+        uint16_t mssrl;
+        uint32_t mcl;
+        uint8_t  msrc;
+    } scc;
+
 #define NVME_NS_SHARED              (1 << 0)
 #define NVME_NS_DETACHED            (1 << 1)
 #define NVME_NS_NVM_EXTENDED_LBA    (1 << 2)
