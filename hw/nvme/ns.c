@@ -96,8 +96,8 @@ static int nvme_ns_init(NvmeNamespace *ns, Error **errp)
     }
 
     id_ns->dpc = 0x1f;
-    id_ns->dps = ns->params.pi;
-    if (ns->params.pi && ns->params.pil) {
+    id_ns->dps = ns->pi_type;
+    if (ns->pi_type && ns->params.pil) {
         id_ns->dps |= NVME_ID_NS_DPS_FIRST_EIGHT;
     }
 
@@ -267,6 +267,7 @@ static int nvme_ns_check_constraints(NvmeNamespace *ns, Error **errp)
 static void nvme_ns_set_params(NvmeNamespace *ns, NvmeNamespaceParams *params)
 {
     ns->nsid = params->nsid;
+    ns->pi_type = params->pi;
 }
 
 int nvme_ns_setup(NvmeNamespace *ns, Error **errp)

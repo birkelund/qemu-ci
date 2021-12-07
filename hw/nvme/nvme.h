@@ -128,6 +128,7 @@ typedef struct NvmeNamespace {
     size_t       lbasz;
 
     uint32_t nsid;
+    uint8_t  pi_type;
 
     const uint32_t *iocs;
     uint8_t      csi;
