@@ -213,7 +213,7 @@ static inline bool nvme_ns_ext(NvmeNamespace *ns)
     return !!NVME_ID_NS_FLBAS_EXTENDED(ns->id_ns.flbas);
 }
 
-void nvme_ns_init_format(NvmeNamespace *ns);
+void nvme_ns_init_format(NvmeNamespace *ns, unsigned int lbaf);
 int nvme_ns_setup(NvmeNamespace *ns, Error **errp);
 void nvme_ns_drain(NvmeNamespace *ns);
 void nvme_ns_shutdown(NvmeNamespace *ns);

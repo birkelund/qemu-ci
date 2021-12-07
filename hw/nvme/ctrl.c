@@ -5276,10 +5276,7 @@ static void nvme_format_set(NvmeNamespace *ns, uint8_t lbaf, uint8_t mset,
         ns->flags |= NVME_NS_NVM_PROT_FIRST;
     }
 
-    ns->id_ns.dps = (pil << 3) | pi;
-    ns->id_ns.flbas = lbaf | (mset << 4);
-
-    nvme_ns_init_format(ns);
+    nvme_ns_init_format(ns, lbaf);
 }
 
 static void nvme_format_ns_cb(void *opaque, int ret)

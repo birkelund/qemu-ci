@@ -25,17 +25,21 @@
 
 #define MIN_DISCARD_GRANULARITY (4 * KiB)
 
-void nvme_ns_init_format(NvmeNamespace *ns)
+void nvme_ns_init_format(NvmeNamespace *ns, unsigned int lbaf)
 {
     NvmeIdNs *id_ns = &ns->id_ns;
     BlockDriverInfo bdi;
     int npdg, nlbas, ret;
 
-    ns->lbaf = id_ns->lbaf[NVME_ID_NS_FLBAS_INDEX(id_ns->flbas)];
+    ns->lbaf = id_ns->lbaf[lbaf];
     ns->lbasz = 1 << ns->lbaf.ds;
 
-    nlbas = ns->size / (ns->lbasz + ns->lbaf.ms);
+    id_ns->flbas = lbaf;
+    if (ns->flags & NVME_NS_NVM_EXTENDED_LBA) {
+        id_ns->flbas |= NVME_ID_NS_FLBAS_EXTENDED;
+    }
 
+    nlbas = ns->size / (ns->lbasz + ns->lbaf.ms);
     id_ns->nsze = cpu_to_le64(nlbas);
 
     /* no thin provisioning */
@@ -43,6 +47,11 @@ void nvme_ns_init_format(NvmeNamespace *ns)
     id_ns->nuse = id_ns->ncap;
 
     ns->moff = (int64_t)nlbas << ns->lbaf.ds;
+
+    id_ns->dps = ns->pi_type;
+    if (ns->flags & NVME_NS_NVM_PROT_FIRST) {
+        id_ns->dps |= NVME_ID_NS_DPS_FIRST_EIGHT;
+    }
 
     npdg = ns->discard_granularity / ns->lbasz;
 
@@ -54,15 +63,36 @@ void nvme_ns_init_format(NvmeNamespace *ns)
     id_ns->npda = id_ns->npdg = npdg - 1;
 }
 
-static void nvme_ns_init(NvmeNamespace *ns)
+static void nvme_ns_init_lba_formats(NvmeNamespace *ns)
 {
     NvmeIdNs *id_ns = &ns->id_ns;
     uint8_t ds;
     uint16_t ms;
-    int i;
+    unsigned i;
 
-    ns->csi = NVME_CSI_NVM;
-    ns->status = 0x0;
+    ds = 31 - clz32(ns->lbasz);
+    ms = ns->lbaf.ms;
+
+    for (i = 0; i <= id_ns->nlbaf; i++) {
+        NvmeLBAF *lbaf = &id_ns->lbaf[i];
+        if (lbaf->ds == ds && lbaf->ms == ms) {
+            nvme_ns_init_format(ns, i);
+            return;
+        }
+    }
+
+    /* add non-standard lba format */
+    id_ns->nlbaf++;
+    id_ns->lbaf[id_ns->nlbaf].ds = ds;
+    id_ns->lbaf[id_ns->nlbaf].ms = ms;
+    id_ns->flbas |= id_ns->nlbaf;
+
+    nvme_ns_init_format(ns, i);
+}
+
+static void nvme_ns_init(NvmeNamespace *ns)
+{
+    NvmeIdNs *id_ns = &ns->id_ns;
 
     nvme_subsys_identify_set_common(id_ns);
 
@@ -80,36 +110,7 @@ static void nvme_ns_init(NvmeNamespace *ns)
     id_ns->mcl = cpu_to_le32(ns->scc.mcl);
     id_ns->msrc = ns->scc.msrc;
 
-    ds = 31 - clz32(ns->lbasz);
-    ms = ns->lbaf.ms;
-
-    if (ns->flags & NVME_NS_NVM_EXTENDED_LBA) {
-        id_ns->flbas |= NVME_ID_NS_FLBAS_EXTENDED;
-    }
-
-    id_ns->dps = ns->pi_type;
-    if (ns->pi_type && (ns->flags & NVME_NS_NVM_PROT_FIRST)) {
-        id_ns->dps |= NVME_ID_NS_DPS_FIRST_EIGHT;
-    }
-
-    for (i = 0; i <= id_ns->nlbaf; i++) {
-        NvmeLBAF *lbaf = &id_ns->lbaf[i];
-        if (lbaf->ds == ds) {
-            if (lbaf->ms == ms) {
-                id_ns->flbas |= i;
-                goto lbaf_found;
-            }
-        }
-    }
-
-    /* add non-standard lba format */
-    id_ns->nlbaf++;
-    id_ns->lbaf[id_ns->nlbaf].ds = ds;
-    id_ns->lbaf[id_ns->nlbaf].ms = ms;
-    id_ns->flbas |= id_ns->nlbaf;
-
-lbaf_found:
-    nvme_ns_init_format(ns);
+    nvme_ns_init_lba_formats(ns);
 }
 
 static int nvme_ns_init_blkconf(NvmeNamespace *ns, BlockConf *blkconf,
