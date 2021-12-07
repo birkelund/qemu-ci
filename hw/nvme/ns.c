@@ -89,7 +89,7 @@ static void nvme_ns_init(NvmeNamespace *ns)
         id_ns->flbas |= NVME_ID_NS_FLBAS_EXTENDED;
     }
 
-    id_ns->dpc = 0x1f;
+    id_ns->dpc = NVME_ID_NS_DPC_MASK;
     id_ns->dps = ns->pi_type;
     if (ns->pi_type && (ns->flags & NVME_NS_NVM_PROT_FIRST)) {
         id_ns->dps |= NVME_ID_NS_DPS_FIRST_EIGHT;

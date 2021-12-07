@@ -1378,6 +1378,15 @@ enum NvmeIdNsZonedOzcs {
 #define NVME_ID_NS_DPC_TYPE_1(dpc)          ((dpc & 0x1))
 #define NVME_ID_NS_DPC_TYPE_MASK            0x7
 
+enum NvmeIdNsDpc {
+    NVME_ID_NS_DPC_TYPE_1      = 1 << 0,
+    NVME_ID_NS_DPC_TYPE_2      = 1 << 1,
+    NVME_ID_NS_DPC_TYPE_3      = 1 << 2,
+    NVME_ID_NS_DPC_FIRST_EIGHT = 1 << 3,
+    NVME_ID_NS_DPC_LAST_EIGHT  = 1 << 4,
+    NVME_ID_NS_DPC_MASK        = 0x1f,
+};
+
 enum NvmeIdNsDps {
     NVME_ID_NS_DPS_TYPE_NONE   = 0,
     NVME_ID_NS_DPS_TYPE_1      = 1,
