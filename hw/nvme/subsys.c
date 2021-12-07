@@ -11,6 +11,28 @@
 
 #include "nvme.h"
 
+void nvme_subsys_identify_set_common(NvmeIdNs *id_ns)
+{
+    static const NvmeLBAF default_lba_formats[] = {
+        { .ds =  9           },
+        { .ds =  9, .ms =  8 },
+        { .ds =  9, .ms = 16 },
+        { .ds =  9, .ms = 64 },
+        { .ds = 12           },
+        { .ds = 12, .ms =  8 },
+        { .ds = 12, .ms = 16 },
+        { .ds = 12, .ms = 64 },
+    };
+
+    id_ns->nlbaf = ARRAY_SIZE(default_lba_formats) - 1;
+
+    id_ns->dlfeat = NVME_ID_NS_DLFEAT_ZEROES;
+    id_ns->mc = NVME_ID_NS_MC_EXTENDED | NVME_ID_NS_MC_SEPARATE;
+    id_ns->dpc = NVME_ID_NS_DPC_MASK;
+
+    memcpy(&id_ns->lbaf, &default_lba_formats, sizeof(default_lba_formats));
+}
+
 int nvme_subsys_register_ctrl(NvmeCtrl *n, Error **errp)
 {
     NvmeSubsystem *subsys = n->subsys;

@@ -64,7 +64,7 @@ static void nvme_ns_init(NvmeNamespace *ns)
     ns->csi = NVME_CSI_NVM;
     ns->status = 0x0;
 
-    id_ns->dlfeat = 0x1;
+    nvme_subsys_identify_set_common(id_ns);
 
     /* support DULBE and I/O optimization fields */
     id_ns->nsfeat |= (0x4 | 0x10);
@@ -83,31 +83,14 @@ static void nvme_ns_init(NvmeNamespace *ns)
     ds = 31 - clz32(ns->lbasz);
     ms = ns->lbaf.ms;
 
-    id_ns->mc = NVME_ID_NS_MC_EXTENDED | NVME_ID_NS_MC_SEPARATE;
-
     if (ns->flags & NVME_NS_NVM_EXTENDED_LBA) {
         id_ns->flbas |= NVME_ID_NS_FLBAS_EXTENDED;
     }
 
-    id_ns->dpc = NVME_ID_NS_DPC_MASK;
     id_ns->dps = ns->pi_type;
     if (ns->pi_type && (ns->flags & NVME_NS_NVM_PROT_FIRST)) {
         id_ns->dps |= NVME_ID_NS_DPS_FIRST_EIGHT;
     }
-
-    static const NvmeLBAF lbaf[16] = {
-        [0] = { .ds =  9           },
-        [1] = { .ds =  9, .ms =  8 },
-        [2] = { .ds =  9, .ms = 16 },
-        [3] = { .ds =  9, .ms = 64 },
-        [4] = { .ds = 12           },
-        [5] = { .ds = 12, .ms =  8 },
-        [6] = { .ds = 12, .ms = 16 },
-        [7] = { .ds = 12, .ms = 64 },
-    };
-
-    memcpy(&id_ns->lbaf, &lbaf, sizeof(lbaf));
-    id_ns->nlbaf = 7;
 
     for (i = 0; i <= id_ns->nlbaf; i++) {
         NvmeLBAF *lbaf = &id_ns->lbaf[i];
