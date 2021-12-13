@@ -303,9 +303,7 @@ void nvme_ns_shutdown(NvmeNamespace *ns)
 void nvme_ns_cleanup(NvmeNamespace *ns)
 {
     if (ns->params.zoned) {
-        g_free(ns->id_ns_zoned);
-        g_free(ns->zone_array);
-        g_free(ns->zd_extensions);
+        nvme_zns_cleanup(ns);
     }
 }
 

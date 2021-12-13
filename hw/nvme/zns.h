@@ -99,5 +99,6 @@ int nvme_zns_aor_check(NvmeNamespace *ns, uint32_t act, uint32_t opn);
 void nvme_zns_init_state(NvmeNamespace *ns);
 void nvme_zns_clear_zone(NvmeNamespace *ns, NvmeZone *zone);
 void nvme_zns_shutdown(NvmeNamespace *ns);
+void nvme_zns_cleanup(NvmeNamespace *ns);
 
 #endif /* HW_NVME_ZNS_H */

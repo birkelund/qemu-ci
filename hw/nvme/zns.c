@@ -196,3 +196,10 @@ void nvme_zns_shutdown(NvmeNamespace *ns)
 
     assert(ns->nr_open_zones == 0);
 }
+
+void nvme_zns_cleanup(NvmeNamespace *ns)
+{
+        g_free(ns->id_ns_zoned);
+        g_free(ns->zone_array);
+        g_free(ns->zd_extensions);
+}
