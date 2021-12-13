@@ -44,10 +44,10 @@ void nvme_ns_init_format(NvmeNamespace *ns)
 
     ns->moff = (int64_t)nlbas << ns->lbaf.ds;
 
-    npdg = ns->blkconf.discard_granularity / ns->lbasz;
+    npdg = ns->discard_granularity / ns->lbasz;
 
     ret = bdrv_get_info(blk_bs(ns->blk), &bdi);
-    if (ret >= 0 && bdi.cluster_size > ns->blkconf.discard_granularity) {
+    if (ret >= 0 && bdi.cluster_size > ns->discard_granularity) {
         npdg = bdi.cluster_size / ns->lbasz;
     }
 
@@ -131,23 +131,26 @@ lbaf_found:
     return 0;
 }
 
-static int nvme_ns_init_blk(NvmeNamespace *ns, Error **errp)
+static int nvme_ns_init_blkconf(NvmeNamespace *ns, BlockConf *blkconf,
+                                Error **errp)
 {
     bool read_only;
 
-    if (!blkconf_blocksizes(&ns->blkconf, errp)) {
+    if (!blkconf_blocksizes(blkconf, errp)) {
         return -1;
     }
 
     read_only = !blk_supports_write_perm(ns->blk);
-    if (!blkconf_apply_backend_options(&ns->blkconf, read_only, false, errp)) {
+    if (!blkconf_apply_backend_options(blkconf, read_only, false, errp)) {
         return -1;
     }
 
-    if (ns->blkconf.discard_granularity == -1) {
-        ns->blkconf.discard_granularity =
-            MAX(ns->blkconf.logical_block_size, MIN_DISCARD_GRANULARITY);
+    if (blkconf->discard_granularity == -1) {
+        blkconf->discard_granularity =
+            MAX(blkconf->logical_block_size, MIN_DISCARD_GRANULARITY);
     }
+
+    ns->discard_granularity = blkconf->discard_granularity;
 
     ns->size = blk_getlength(ns->blk);
     if (ns->size < 0) {
@@ -320,7 +323,7 @@ int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
         ns->eui64.v = ns_count + NVME_EUI64_DEFAULT;
     }
 
-    if (nvme_ns_init_blk(ns, errp)) {
+    if (nvme_ns_init_blkconf(ns, &ns->blkconf, errp)) {
         return -1;
     }
 

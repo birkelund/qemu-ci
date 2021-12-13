@@ -126,6 +126,7 @@ typedef struct NvmeNamespace {
     NvmeIdNs     id_ns;
     NvmeLBAF     lbaf;
     size_t       lbasz;
+    uint32_t     discard_granularity;
 
     uint32_t nsid;
     uint8_t  pi_type;
