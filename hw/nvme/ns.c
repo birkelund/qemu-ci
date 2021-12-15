@@ -54,7 +54,7 @@ void nvme_ns_init_format(NvmeNamespace *ns)
     id_ns->npda = id_ns->npdg = npdg - 1;
 }
 
-static int nvme_ns_init(NvmeNamespace *ns, Error **errp)
+static void nvme_ns_init(NvmeNamespace *ns)
 {
     NvmeIdNs *id_ns = &ns->id_ns;
     uint8_t ds;
@@ -64,7 +64,7 @@ static int nvme_ns_init(NvmeNamespace *ns, Error **errp)
     ns->csi = NVME_CSI_NVM;
     ns->status = 0x0;
 
-    ns->id_ns.dlfeat = 0x1;
+    id_ns->dlfeat = 0x1;
 
     /* support DULBE and I/O optimization fields */
     id_ns->nsfeat |= (0x4 | 0x10);
@@ -127,8 +127,6 @@ static int nvme_ns_init(NvmeNamespace *ns, Error **errp)
 
 lbaf_found:
     nvme_ns_init_format(ns);
-
-    return 0;
 }
 
 static int nvme_ns_init_blkconf(NvmeNamespace *ns, BlockConf *blkconf,
@@ -327,9 +325,8 @@ int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
         return -1;
     }
 
-    if (nvme_ns_init(ns, errp)) {
-        return -1;
-    }
+    nvme_ns_init(ns);
+
     if (ns->flags & NVME_NS_ZONED) {
         if (nvme_zns_check_calc_geometry(ns, errp) != 0) {
             return -1;
