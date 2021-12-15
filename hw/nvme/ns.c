@@ -211,46 +211,41 @@ static int nvme_zns_check_calc_geometry(NvmeNamespace *ns, Error **errp)
     return 0;
 }
 
-static int nvme_ns_check_constraints(NvmeNamespace *ns, Error **errp)
+static int nvme_ns_check_params(NvmeNamespaceParams *params, Error **errp)
 {
-    if (!ns->blkconf.blk) {
-        error_setg(errp, "block backend not configured");
-        return -1;
-    }
-
-    if (ns->params.pi && ns->params.ms < 8) {
+    if (params->pi && params->ms < 8) {
         error_setg(errp, "at least 8 bytes of metadata required to enable "
                    "protection information");
         return -1;
     }
 
-    if (ns->params.nsid > NVME_MAX_NAMESPACES) {
+    if (params->nsid > NVME_MAX_NAMESPACES) {
         error_setg(errp, "invalid namespace id (must be between 0 and %d)",
                    NVME_MAX_NAMESPACES);
         return -1;
     }
 
-    if (ns->params.zoned) {
-        if (ns->params.max_active_zones) {
-            if (ns->params.max_open_zones > ns->params.max_active_zones) {
+    if (params->zoned) {
+        if (params->max_active_zones) {
+            if (params->max_open_zones > params->max_active_zones) {
                 error_setg(errp, "max_open_zones (%u) exceeds "
-                           "max_active_zones (%u)", ns->params.max_open_zones,
-                           ns->params.max_active_zones);
+                           "max_active_zones (%u)", params->max_open_zones,
+                           params->max_active_zones);
                 return -1;
             }
 
-            if (!ns->params.max_open_zones) {
-                ns->params.max_open_zones = ns->params.max_active_zones;
+            if (!params->max_open_zones) {
+                params->max_open_zones = params->max_active_zones;
             }
         }
 
-        if (ns->params.zd_extension_size) {
-            if (ns->params.zd_extension_size & 0x3f) {
+        if (params->zd_extension_size) {
+            if (params->zd_extension_size & 0x3f) {
                 error_setg(errp, "zone descriptor extension size must be a "
                            "multiple of 64B");
                 return -1;
             }
-            if ((ns->params.zd_extension_size >> 6) > 0xff) {
+            if ((params->zd_extension_size >> 6) > 0xff) {
                 error_setg(errp,
                            "zone descriptor extension size is too large");
                 return -1;
@@ -309,9 +304,14 @@ int nvme_ns_setup(NvmeNamespace *ns, Error **errp)
 {
     static uint64_t ns_count;
 
+    if (!ns->blkconf.blk) {
+        error_setg(errp, "block backend not configured");
+        return -1;
+    }
+
     ns->blk = ns->blkconf.blk;
 
-    if (nvme_ns_check_constraints(ns, errp)) {
+    if (nvme_ns_check_params(&ns->params, errp)) {
         return -1;
     }
 
