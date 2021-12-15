@@ -80,8 +80,8 @@ static void nvme_ns_init(NvmeNamespace *ns)
     id_ns->mcl = cpu_to_le32(ns->scc.mcl);
     id_ns->msrc = ns->scc.msrc;
 
-    ds = 31 - clz32(ns->blkconf.logical_block_size);
-    ms = ns->params.ms;
+    ds = 31 - clz32(ns->lbasz);
+    ms = ns->lbaf.ms;
 
     id_ns->mc = NVME_ID_NS_MC_EXTENDED | NVME_ID_NS_MC_SEPARATE;
 
@@ -148,6 +148,7 @@ static int nvme_ns_init_blkconf(NvmeNamespace *ns, BlockConf *blkconf,
             MAX(blkconf->logical_block_size, MIN_DISCARD_GRANULARITY);
     }
 
+    ns->lbasz = blkconf->logical_block_size;
     ns->discard_granularity = blkconf->discard_granularity;
 
     ns->size = blk_getlength(ns->blk);
