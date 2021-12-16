@@ -6207,6 +6207,32 @@ static int nvme_check_params(NvmeCtrl *n, Error **errp)
         return -1;
     }
 
+    if (n->params.zasl > n->params.mdts) {
+        error_setg(errp, "zoned.zasl (Zone Append Size Limit) must be less "
+                   "than or equal to mdts (Maximum Data Transfer Size)");
+        return -1;
+    }
+
+    if (!n->params.vsl) {
+        error_setg(errp, "vsl must be non-zero");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int nvme_init_state(NvmeCtrl *n, Error **errp)
+{
+    /* add one to max_ioqpairs to account for the admin queue pair */
+    n->reg_size = pow2ceil(sizeof(NvmeBar) +
+                           2 * (n->params.max_ioqpairs + 1) * NVME_DB_SIZE);
+    n->sq = g_new0(NvmeSQueue *, n->params.max_ioqpairs + 1);
+    n->cq = g_new0(NvmeCQueue *, n->params.max_ioqpairs + 1);
+    n->temperature = NVME_TEMPERATURE;
+    n->features.temp_thresh_hi = NVME_TEMPERATURE_WARNING;
+    n->starttime_ms = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL);
+    n->aer_reqs = g_new0(NvmeRequest *, n->params.aerl + 1);
+
     if (n->pmr.dev) {
         if (host_memory_backend_is_mapped(n->pmr.dev)) {
             error_setg(errp, "can't use already busy memdev: %s",
@@ -6222,31 +6248,7 @@ static int nvme_check_params(NvmeCtrl *n, Error **errp)
         host_memory_backend_set_mapped(n->pmr.dev, true);
     }
 
-    if (n->params.zasl > n->params.mdts) {
-        error_setg(errp, "zoned.zasl (Zone Append Size Limit) must be less "
-                   "than or equal to mdts (Maximum Data Transfer Size)");
-        return -1;
-    }
-
-    if (!n->params.vsl) {
-        error_setg(errp, "vsl must be non-zero");
-        return -1;
-    }
-
     return 0;
-}
-
-static void nvme_init_state(NvmeCtrl *n)
-{
-    /* add one to max_ioqpairs to account for the admin queue pair */
-    n->reg_size = pow2ceil(sizeof(NvmeBar) +
-                           2 * (n->params.max_ioqpairs + 1) * NVME_DB_SIZE);
-    n->sq = g_new0(NvmeSQueue *, n->params.max_ioqpairs + 1);
-    n->cq = g_new0(NvmeCQueue *, n->params.max_ioqpairs + 1);
-    n->temperature = NVME_TEMPERATURE;
-    n->features.temp_thresh_hi = NVME_TEMPERATURE_WARNING;
-    n->starttime_ms = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL);
-    n->aer_reqs = g_new0(NvmeRequest *, n->params.aerl + 1);
 }
 
 static void nvme_init_cmb(NvmeCtrl *n, PCIDevice *pci_dev)
@@ -6509,7 +6511,10 @@ static void nvme_realize(PCIDevice *pci_dev, Error **errp)
     qbus_init(&n->bus, sizeof(NvmeBus), TYPE_NVME_BUS,
               &pci_dev->qdev, n->parent_obj.qdev.id);
 
-    nvme_init_state(n);
+    if (nvme_init_state(n, errp)) {
+        return;
+    }
+
     if (nvme_init_pci(n, pci_dev, errp)) {
         return;
     }
