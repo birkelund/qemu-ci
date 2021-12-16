@@ -6240,8 +6240,9 @@ static int nvme_init_state(NvmeCtrl *n, Error **errp)
     return 0;
 }
 
-static void nvme_init_cmb(NvmeCtrl *n, PCIDevice *pci_dev)
+static void nvme_init_cmb(NvmeCtrl *n)
 {
+    PCIDevice *pci_dev = PCI_DEVICE(n);
     uint64_t cmb_size = n->params.cmb_size_mb * MiB;
     uint64_t cap = ldq_le_p(&n->bar.cap);
 
@@ -6262,8 +6263,9 @@ static void nvme_init_cmb(NvmeCtrl *n, PCIDevice *pci_dev)
     }
 }
 
-static void nvme_init_pmr(NvmeCtrl *n, PCIDevice *pci_dev)
+static void nvme_init_pmr(NvmeCtrl *n)
 {
+    PCIDevice *pci_dev = PCI_DEVICE(n);
     uint32_t pmrcap = ldl_le_p(&n->bar.pmrcap);
 
     NVME_PMRCAP_SET_RDS(pmrcap, 1);
@@ -6282,8 +6284,9 @@ static void nvme_init_pmr(NvmeCtrl *n, PCIDevice *pci_dev)
     memory_region_set_enabled(&n->pmr.dev->mr, false);
 }
 
-static int nvme_init_pci(NvmeCtrl *n, PCIDevice *pci_dev, Error **errp)
+static int nvme_init_pci(NvmeCtrl *n, Error **errp)
 {
+    PCIDevice *pci_dev = PCI_DEVICE(n);
     uint8_t *pci_conf = pci_dev->config;
     uint64_t bar_size, msix_table_size, msix_pba_size;
     unsigned msix_table_offset, msix_pba_offset;
@@ -6337,11 +6340,11 @@ static int nvme_init_pci(NvmeCtrl *n, PCIDevice *pci_dev, Error **errp)
     }
 
     if (n->params.cmb_size_mb) {
-        nvme_init_cmb(n, pci_dev);
+        nvme_init_cmb(n);
     }
 
     if (n->pmr.dev) {
-        nvme_init_pmr(n, pci_dev);
+        nvme_init_pmr(n);
     }
 
     return 0;
@@ -6360,8 +6363,9 @@ static void nvme_init_subnqn(NvmeCtrl *n)
     }
 }
 
-static void nvme_init_ctrl(NvmeCtrl *n, PCIDevice *pci_dev)
+static void nvme_init_ctrl(NvmeCtrl *n)
 {
+    PCIDevice *pci_dev = PCI_DEVICE(n);
     NvmeIdCtrl *id = &n->id_ctrl;
     uint8_t *pci_conf = pci_dev->config;
     uint64_t cap = ldq_le_p(&n->bar.cap);
@@ -6504,7 +6508,7 @@ static void nvme_realize(PCIDevice *pci_dev, Error **errp)
         return;
     }
 
-    if (nvme_init_pci(n, pci_dev, errp)) {
+    if (nvme_init_pci(n, errp)) {
         return;
     }
 
@@ -6512,7 +6516,7 @@ static void nvme_realize(PCIDevice *pci_dev, Error **errp)
         return;
     }
 
-    nvme_init_ctrl(n, pci_dev);
+    nvme_init_ctrl(n);
 
     /* setup a namespace if the controller drive property was given */
     if (n->namespace.blkconf.blk) {
