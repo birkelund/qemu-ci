@@ -6171,21 +6171,13 @@ static const MemoryRegionOps nvme_cmb_ops = {
     },
 };
 
-static int nvme_check_params(NvmeCtrl *n, Error **errp)
+static int nvme_check_params(NvmeParams *params, Error **errp)
 {
-    NvmeParams *params = &n->params;
-
     if (params->num_queues) {
         warn_report("num_queues is deprecated; please use max_ioqpairs "
                     "instead");
 
         params->max_ioqpairs = params->num_queues - 1;
-    }
-
-    if (n->namespace.blkconf.blk && n->subsys) {
-        error_setg(errp, "subsystem support is unavailable with legacy "
-                   "namespace ('drive' property)");
-        return -1;
     }
 
     if (params->max_ioqpairs < 1 ||
@@ -6207,13 +6199,13 @@ static int nvme_check_params(NvmeCtrl *n, Error **errp)
         return -1;
     }
 
-    if (n->params.zasl > n->params.mdts) {
+    if (params->zasl > params->mdts) {
         error_setg(errp, "zoned.zasl (Zone Append Size Limit) must be less "
                    "than or equal to mdts (Maximum Data Transfer Size)");
         return -1;
     }
 
-    if (!n->params.vsl) {
+    if (!params->vsl) {
         error_setg(errp, "vsl must be non-zero");
         return -1;
     }
@@ -6504,7 +6496,7 @@ static void nvme_realize(PCIDevice *pci_dev, Error **errp)
     NvmeCtrl *n = NVME(pci_dev);
     NvmeNamespace *ns;
 
-    if (nvme_check_params(n, errp)) {
+    if (nvme_check_params(&n->params, errp)) {
         return;
     }
 
